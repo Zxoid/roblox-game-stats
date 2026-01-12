@@ -1,5 +1,5 @@
-// 1. YOUR PLACE IDs (These are the numbers you gave me)
-const placeIds = [
+// 1. YOUR UNIVERSE IDs (Since you said these are already Universe IDs, we use them directly)
+const universeIds = [
     9501022712,  
     9041696916,  
     8508052794,
@@ -17,37 +17,28 @@ async function fetchGameStats() {
     subtitle.innerText = "Loading your games...";
 
     try {
-        // STEP 1: Convert Place IDs to Universe IDs
-        // This fixes the "0 stats" and "Wrong Game" issue
-        const placeIdsString = placeIds.join('&placeIds=');
-        const conversionUrl = `https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeIdsString}`;
-        const encodedConversionUrl = encodeURIComponent(conversionUrl);
-        
-        const conversionResponse = await fetch(`${proxyUrl}${encodedConversionUrl}`);
-        if (!conversionResponse.ok) throw new Error("Failed to connect to Roblox API");
-        
-        const conversionData = await conversionResponse.json();
-        const placesDetails = JSON.parse(conversionData.contents);
-        
-        // Extract the REAL Universe IDs hidden behind your Place IDs
-        const universeIds = placesDetails.map(place => place.universeId);
-        
-        if (universeIds.length === 0) {
-            throw new Error("No valid games found. Check IDs.");
-        }
-
+        // STEP 1: PREPARE THE IDS
+        // We skip the conversion because you already provided Universe IDs
         const idsString = universeIds.join(',');
 
-        // STEP 2: Fetch Game Stats using the new Universe IDs
+        // STEP 2: FETCH GAME STATS DIRECTLY
         const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}`;
         const encodedStatsUrl = encodeURIComponent(statsUrl);
+        
         const statsResponse = await fetch(`${proxyUrl}${encodedStatsUrl}`);
+        if (!statsResponse.ok) throw new Error("Failed to connect to Roblox API");
+
         const statsData = await statsResponse.json();
         const games = JSON.parse(statsData.contents).data;
 
-        // STEP 3: Fetch Thumbnails
+        if (!games || games.length === 0) {
+            throw new Error("No games found. Double check that these are definitely Universe IDs!");
+        }
+
+        // STEP 3: FETCH THUMBNAILS
         const thumbUrl = `https://thumbnails.roblox.com/v1/games/icons?universeIds=${idsString}&size=512x512&format=Png&isCircular=false`;
         const encodedThumbUrl = encodeURIComponent(thumbUrl);
+        
         const thumbResponse = await fetch(`${proxyUrl}${encodedThumbUrl}`);
         const thumbData = await thumbResponse.json();
         const thumbnails = JSON.parse(thumbData.contents).data;
@@ -59,7 +50,7 @@ async function fetchGameStats() {
 
     } catch (error) {
         console.error("Error:", error);
-        subtitle.innerText = "Error loading. Please refresh the page.";
+        subtitle.innerText = "Error loading. Check Console (F12) for details.";
     }
 }
 
@@ -71,6 +62,7 @@ function renderGames(games, thumbnails) {
     games.sort((a, b) => b.playing - a.playing);
 
     games.forEach(game => {
+        // Match the thumbnail to the game ID
         const thumbObj = thumbnails.find(t => t.targetId === game.id);
         const thumbUrl = thumbObj ? thumbObj.imageUrl : 'https://via.placeholder.com/512';
 
