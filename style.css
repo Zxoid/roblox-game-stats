@@ -44,15 +44,16 @@ h1 {
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1400px; /* Increased max-width so 3 big cards fit nicely */
     margin: 0 auto;
     padding: 20px;
 }
 
 .game-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
+    /* KEY CHANGE: Increased min-width from 250px to 360px to make boxes bigger */
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 30px; /* Increased gap for better spacing */
 }
 
 .game-card {
@@ -71,19 +72,20 @@ h1 {
 
 .game-thumb {
     width: 100%;
-    aspect-ratio: 16/9; /* Standard Roblox Thumbnail ratio */
+    aspect-ratio: 16/9; /* Ensures the thumbnail stays in 16:9 landscape */
     object-fit: cover;
     background-color: #000;
+    display: block; /* Removes tiny gap under image */
 }
 
 .game-info {
-    padding: 15px;
+    padding: 20px; /* Increased padding */
 }
 
 .game-title {
-    font-size: 1.1rem;
+    font-size: 1.4rem; /* Increased font size for bigger card */
     font-weight: bold;
-    margin: 0 0 10px 0;
+    margin: 0 0 15px 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -92,9 +94,15 @@ h1 {
 .stat-row {
     display: flex;
     justify-content: space-between;
-    font-size: 0.9rem;
+    font-size: 1.1rem; /* Increased font size for readability */
     color: #ccc;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #333; /* Added subtle separator */
+}
+
+.stat-row:last-child {
+    border-bottom: none;
 }
 
 .stat-value {
