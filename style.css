@@ -1,0 +1,103 @@
+:root {
+    --bg-color: #1a1a1a;
+    --card-bg: #252525;
+    --text-color: #ffffff;
+    --accent-color: #00b06f; /* Greenish accent similar to Roblox */
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.header {
+    padding: 40px 20px;
+    background: linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%);
+}
+
+h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3rem;
+    margin: 0;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    color: #888;
+    margin-top: 5px;
+    font-size: 1.2rem;
+}
+
+.main-stats {
+    margin-top: 20px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    background: rgba(0,0,0,0.3);
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 50px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.game-card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: left;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.game-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0,0,0,0.5);
+}
+
+.game-thumb {
+    width: 100%;
+    aspect-ratio: 16/9; /* Standard Roblox Thumbnail ratio */
+    object-fit: cover;
+    background-color: #000;
+}
+
+.game-info {
+    padding: 15px;
+}
+
+.game-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #ccc;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-weight: bold;
+    color: #fff;
+}
