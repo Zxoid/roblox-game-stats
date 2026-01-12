@@ -13,16 +13,16 @@ const universeIds = [
     8498191381,
     8489043260,
     8320298286
-    
-    
-    
 ];
 
 const proxyUrl = "https://corsproxy.io/?"; 
 
 async function fetchGameStats() {
     const subtitle = document.querySelector('.subtitle');
-    if(subtitle) subtitle.innerText = "Loading your games...";
+    // If it's the first load, show loading text
+    if(subtitle && subtitle.innerText === "Loading...") {
+        subtitle.innerText = "Loading your games...";
+    }
 
     try {
         const idsString = universeIds.join(',');
@@ -49,8 +49,11 @@ async function fetchGameStats() {
         const thumbData = await thumbResponse.json();
         const thumbnails = thumbData.data; 
 
-        // Success!
-        if(subtitle) subtitle.innerText = "Look at all those numbers go!";
+        // Success! Update the text with the current time
+        if(subtitle) {
+            const time = new Date().toLocaleTimeString();
+            subtitle.innerText = `Updated at ${time}`;
+        }
         
         renderGames(games, thumbnails);
         updateTotalStats(games);
@@ -76,14 +79,12 @@ function renderGames(games, thumbnails) {
             thumbUrl = thumbData.thumbnails[0].imageUrl;
         }
 
-        // --- NEW: CREATE LINK TO GAME ---
-        // We use rootPlaceId for the actual game link
+        // --- LINK TO GAME ---
         const gameUrl = `https://www.roblox.com/games/${game.rootPlaceId}`;
 
-        // Changed 'div' to 'a' so it is clickable
         const card = document.createElement('a');
         card.href = gameUrl;
-        card.target = "_blank"; // Opens in a new tab
+        card.target = "_blank"; 
         card.className = 'game-card';
         
         card.innerHTML = `
@@ -127,5 +128,8 @@ function updateTotalStats(games) {
     if(vLabel) vLabel.innerText = totalVisits.toLocaleString();
 }
 
+// 1. Run immediately on load
+fetchGameStats();
+
+// 2. Set the timer to run again every 60 seconds
 setInterval(fetchGameStats, 60000);
-subtitle.innerText = `Updated at ${new Date().toLocaleTimeString()}`;
