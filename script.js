@@ -19,6 +19,7 @@ const proxyUrl = "https://corsproxy.io/?";
 
 async function fetchGameStats() {
     const subtitle = document.querySelector('.subtitle');
+    
     // Only show "Loading..." text on the very first run
     if(subtitle && subtitle.innerText === "Loading...") {
         subtitle.innerText = "Loading your games...";
@@ -26,15 +27,19 @@ async function fetchGameStats() {
 
     try {
         const idsString = universeIds.join(',');
-        // CACHE BUSTER: We generate a timestamp so every request is unique
-        const cacheBuster = Date.now(); 
+        const cacheBuster = Date.now(); // Unique number every time
+
+        console.log(`[${new Date().toLocaleTimeString()}] Fetching fresh data...`);
 
         // --- STEP 1: FETCH GAME STATS ---
-        // Added &_t=${cacheBuster} to force a fresh download
+        // Added 'cache: no-store' to force browser to ignore cache
         const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}&_t=${cacheBuster}`;
         const encodedStatsUrl = encodeURIComponent(statsUrl);
         
-        const statsResponse = await fetch(`${proxyUrl}${encodedStatsUrl}`);
+        const statsResponse = await fetch(`${proxyUrl}${encodedStatsUrl}`, {
+            cache: "no-store" 
+        });
+
         if (!statsResponse.ok) throw new Error("Failed to connect to Roblox API");
 
         const statsData = await statsResponse.json();
@@ -45,17 +50,20 @@ async function fetchGameStats() {
         }
 
         // --- STEP 2: FETCH THUMBNAILS ---
-        const thumbUrl = `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${idsString}&countPerUniverse=1&size=768x432&format=Png&isCircular=false`;
+        const thumbUrl = `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${idsString}&countPerUniverse=1&size=768x432&format=Png&isCircular=false&_t=${cacheBuster}`;
         const encodedThumbUrl = encodeURIComponent(thumbUrl);
         
-        const thumbResponse = await fetch(`${proxyUrl}${encodedThumbUrl}`);
+        const thumbResponse = await fetch(`${proxyUrl}${encodedThumbUrl}`, {
+            cache: "no-store"
+        });
         const thumbData = await thumbResponse.json();
         const thumbnails = thumbData.data; 
 
-        // Success! Update timestamp
+        // Success!
         if(subtitle) {
             const time = new Date().toLocaleTimeString();
             subtitle.innerText = `Updated at ${time}`;
+            console.log("Success! Data updated.");
         }
         
         renderGames(games, thumbnails);
@@ -69,9 +77,7 @@ async function fetchGameStats() {
 
 function renderGames(games, thumbnails) {
     const grid = document.getElementById('game-grid');
-    
-    // Save current scroll position so page doesn't jump when refreshing
-    const scrollPos = window.scrollY;
+    const scrollPos = window.scrollY; // Save scroll position
     
     grid.innerHTML = ''; 
 
@@ -82,11 +88,14 @@ function renderGames(games, thumbnails) {
         // MATCH THUMBNAIL
         const thumbData = thumbnails.find(t => t.universeId === game.id);
         let thumbUrl = 'https://via.placeholder.com/768x432';
+        
+        // If Roblox has a thumbnail, use it. 
+        // Note: If you changed it recently, Roblox API might still send the old one for a while.
         if (thumbData && thumbData.thumbnails && thumbData.thumbnails.length > 0) {
             thumbUrl = thumbData.thumbnails[0].imageUrl;
         }
 
-        // --- LINK TO GAME ---
+        // LINK TO GAME
         const gameUrl = `https://www.roblox.com/games/${game.rootPlaceId}`;
 
         const card = document.createElement('a');
@@ -118,8 +127,7 @@ function renderGames(games, thumbnails) {
         grid.appendChild(card);
     });
 
-    // Restore scroll position
-    window.scrollTo(0, scrollPos);
+    window.scrollTo(0, scrollPos); // Restore scroll position
 }
 
 function updateTotalStats(games) {
@@ -138,8 +146,8 @@ function updateTotalStats(games) {
     if(vLabel) vLabel.innerText = totalVisits.toLocaleString();
 }
 
-// 1. Run immediately on load
+// 1. Run immediately
 fetchGameStats();
 
-// 2. Set the timer to run again every 60 seconds
+// 2. Run every 60 seconds
 setInterval(fetchGameStats, 60000);
