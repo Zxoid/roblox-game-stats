@@ -128,3 +128,5 @@ function updateTotalStats(games) {
 }
 
 fetchGameStats();
+setInterval(fetchGameStats, 60000);
+subtitle.innerText = `Updated at ${new Date().toLocaleTimeString()}`;
