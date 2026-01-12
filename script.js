@@ -1,52 +1,28 @@
-// 1. PUT YOUR PLACE IDs HERE (The number in your game's URL)
-// Example: roblox.com/games/123456/Game-Name -> Use 123456
-const placeIds = [
+// YOUR UNIVERSE IDs (As you confirmed)
+const universeIds = [
     9501022712,  
     9041696916,  
     8508052794,
     8645669017,
     9539811654,
     8662003473,
-    9501022712,
     9413725497,
     9451035756
-    
-    
-    
-    
-    
 ];
 
 const proxyUrl = "https://api.allorigins.win/get?url="; 
 
 async function fetchGameStats() {
     try {
-        // Step 1: Convert Place IDs to Universe IDs
-        // We use the multiget-place-details endpoint
-        const placeIdsString = placeIds.join('&placeIds=');
-        const conversionApiUrl = encodeURIComponent(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeIdsString}`);
-        
-        const conversionResponse = await fetch(`${proxyUrl}${conversionApiUrl}`);
-        const conversionData = await conversionResponse.json();
-        const placesDetails = JSON.parse(conversionData.contents);
-        
-        // Extract just the Universe IDs
-        const universeIds = placesDetails.map(place => place.universeId);
-        
-        if (universeIds.length === 0) {
-            console.error("No Universe IDs found. Check your Place IDs.");
-            return;
-        }
-
         const idsString = universeIds.join(',');
-
-        // Step 2: Fetch Game Info (Visits, Playing, Favorites)
+        
+        // 1. Fetch Game Info (Directly using Universe IDs)
         const statsApiUrl = encodeURIComponent(`https://games.roblox.com/v1/games?universeIds=${idsString}`);
         const statsResponse = await fetch(`${proxyUrl}${statsApiUrl}`);
         const statsData = await statsResponse.json();
         const games = JSON.parse(statsData.contents).data;
 
-        // Step 3: Fetch Thumbnails
+        // 2. Fetch Thumbnails
         const thumbApiUrl = encodeURIComponent(`https://thumbnails.roblox.com/v1/games/icons?universeIds=${idsString}&size=512x512&format=Png&isCircular=false`);
         const thumbResponse = await fetch(`${proxyUrl}${thumbApiUrl}`);
         const thumbData = await thumbResponse.json();
@@ -57,7 +33,7 @@ async function fetchGameStats() {
 
     } catch (error) {
         console.error("Error fetching stats:", error);
-        document.querySelector('.subtitle').innerText = "Failed to load stats. Check console for errors.";
+        document.querySelector('.subtitle').innerText = "Failed to load stats. Double check if these are definitely Universe IDs.";
     }
 }
 
