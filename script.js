@@ -19,16 +19,19 @@ const proxyUrl = "https://corsproxy.io/?";
 
 async function fetchGameStats() {
     const subtitle = document.querySelector('.subtitle');
-    // If it's the first load, show loading text
+    // Only show "Loading..." text on the very first run
     if(subtitle && subtitle.innerText === "Loading...") {
         subtitle.innerText = "Loading your games...";
     }
 
     try {
         const idsString = universeIds.join(',');
+        // CACHE BUSTER: We generate a timestamp so every request is unique
+        const cacheBuster = Date.now(); 
 
         // --- STEP 1: FETCH GAME STATS ---
-        const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}`;
+        // Added &_t=${cacheBuster} to force a fresh download
+        const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}&_t=${cacheBuster}`;
         const encodedStatsUrl = encodeURIComponent(statsUrl);
         
         const statsResponse = await fetch(`${proxyUrl}${encodedStatsUrl}`);
@@ -49,7 +52,7 @@ async function fetchGameStats() {
         const thumbData = await thumbResponse.json();
         const thumbnails = thumbData.data; 
 
-        // Success! Update the text with the current time
+        // Success! Update timestamp
         if(subtitle) {
             const time = new Date().toLocaleTimeString();
             subtitle.innerText = `Updated at ${time}`;
@@ -66,6 +69,10 @@ async function fetchGameStats() {
 
 function renderGames(games, thumbnails) {
     const grid = document.getElementById('game-grid');
+    
+    // Save current scroll position so page doesn't jump when refreshing
+    const scrollPos = window.scrollY;
+    
     grid.innerHTML = ''; 
 
     // Sort by playing count (Highest first)
@@ -110,6 +117,9 @@ function renderGames(games, thumbnails) {
         `;
         grid.appendChild(card);
     });
+
+    // Restore scroll position
+    window.scrollTo(0, scrollPos);
 }
 
 function updateTotalStats(games) {
