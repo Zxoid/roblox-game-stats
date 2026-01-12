@@ -2,9 +2,14 @@
 // To find a Universe ID: Go to the game on Roblox -> Right Click -> Inspect -> Search for "data-universe-id"
 // Or use an API to convert Place ID to Universe ID.
 const universeIds = [
-    34129200207, // Example ID (Grow a Garden)
-    4188648539,  // Example ID (Plants vs Brainrots)
-    2016351420   // Example ID (Dusty Trip)
+    138615169232956, 
+    97112811024040,  
+    127544103393569,
+    111678490145722,
+    112696600796099,
+    129578714147734,
+    86623606317108,
+    80260150463464
 ];
 
 const proxyUrl = "https://api.allorigins.win/get?url="; // Public Proxy to bypass CORS
