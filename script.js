@@ -1,31 +1,52 @@
-// REPLACE THESE WITH YOUR GAME UNIVERSE IDs
-// To find a Universe ID: Go to the game on Roblox -> Right Click -> Inspect -> Search for "data-universe-id"
-// Or use an API to convert Place ID to Universe ID.
-const universeIds = [
-    138615169232956, 
-    97112811024040,  
-    127544103393569,
-    111678490145722,
-    112696600796099,
-    129578714147734,
-    86623606317108,
-    80260150463464
+// 1. PUT YOUR PLACE IDs HERE (The number in your game's URL)
+// Example: roblox.com/games/123456/Game-Name -> Use 123456
+const placeIds = [
+    9501022712,  
+    9041696916,  
+    8508052794,
+    8645669017,
+    9539811654,
+    8662003473,
+    9501022712,
+    9413725497,
+    9451035756
+    
+    
+    
+    
+    
 ];
 
-const proxyUrl = "https://api.allorigins.win/get?url="; // Public Proxy to bypass CORS
+const proxyUrl = "https://api.allorigins.win/get?url="; 
 
 async function fetchGameStats() {
     try {
-        const idsString = universeIds.join(',');
+        // Step 1: Convert Place IDs to Universe IDs
+        // We use the multiget-place-details endpoint
+        const placeIdsString = placeIds.join('&placeIds=');
+        const conversionApiUrl = encodeURIComponent(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeIdsString}`);
         
-        // 1. Fetch Game Info (Visits, Playing, Favorites)
-        // We encode the component to safely pass it through the proxy
+        const conversionResponse = await fetch(`${proxyUrl}${conversionApiUrl}`);
+        const conversionData = await conversionResponse.json();
+        const placesDetails = JSON.parse(conversionData.contents);
+        
+        // Extract just the Universe IDs
+        const universeIds = placesDetails.map(place => place.universeId);
+        
+        if (universeIds.length === 0) {
+            console.error("No Universe IDs found. Check your Place IDs.");
+            return;
+        }
+
+        const idsString = universeIds.join(',');
+
+        // Step 2: Fetch Game Info (Visits, Playing, Favorites)
         const statsApiUrl = encodeURIComponent(`https://games.roblox.com/v1/games?universeIds=${idsString}`);
         const statsResponse = await fetch(`${proxyUrl}${statsApiUrl}`);
         const statsData = await statsResponse.json();
         const games = JSON.parse(statsData.contents).data;
 
-        // 2. Fetch Thumbnails
+        // Step 3: Fetch Thumbnails
         const thumbApiUrl = encodeURIComponent(`https://thumbnails.roblox.com/v1/games/icons?universeIds=${idsString}&size=512x512&format=Png&isCircular=false`);
         const thumbResponse = await fetch(`${proxyUrl}${thumbApiUrl}`);
         const thumbData = await thumbResponse.json();
@@ -36,19 +57,18 @@ async function fetchGameStats() {
 
     } catch (error) {
         console.error("Error fetching stats:", error);
-        document.querySelector('.subtitle').innerText = "Failed to load stats. Try refreshing.";
+        document.querySelector('.subtitle').innerText = "Failed to load stats. Check console for errors.";
     }
 }
 
 function renderGames(games, thumbnails) {
     const grid = document.getElementById('game-grid');
-    grid.innerHTML = ''; // Clear existing content
+    grid.innerHTML = ''; 
 
     // Sort games by playing count (Highest first)
     games.sort((a, b) => b.playing - a.playing);
 
     games.forEach(game => {
-        // Find matching thumbnail
         const thumbObj = thumbnails.find(t => t.targetId === game.id);
         const thumbUrl = thumbObj ? thumbObj.imageUrl : 'https://via.placeholder.com/512';
 
@@ -86,10 +106,8 @@ function updateTotalStats(games) {
         totalPlayers += game.playing;
     });
 
-    // Animate the numbers (optional simple text update)
     document.getElementById('total-players').innerText = totalPlayers.toLocaleString();
     document.getElementById('total-visits').innerText = totalVisits.toLocaleString();
 }
 
-// Run the function when page loads
 fetchGameStats();
