@@ -1,4 +1,4 @@
-// 1. YOUR UNIVERSE IDs (Since you said these are already Universe IDs, we use them directly)
+// 1. YOUR UNIVERSE IDs
 const universeIds = [
     9501022712,  
     9041696916,  
@@ -14,14 +14,12 @@ const proxyUrl = "https://api.allorigins.win/get?url=";
 
 async function fetchGameStats() {
     const subtitle = document.querySelector('.subtitle');
-    subtitle.innerText = "Loading your games...";
+    if(subtitle) subtitle.innerText = "Loading your games...";
 
     try {
-        // STEP 1: PREPARE THE IDS
-        // We skip the conversion because you already provided Universe IDs
         const idsString = universeIds.join(',');
 
-        // STEP 2: FETCH GAME STATS DIRECTLY
+        // STEP 1: FETCH GAME STATS
         const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}`;
         const encodedStatsUrl = encodeURIComponent(statsUrl);
         
@@ -32,11 +30,13 @@ async function fetchGameStats() {
         const games = JSON.parse(statsData.contents).data;
 
         if (!games || games.length === 0) {
-            throw new Error("No games found. Double check that these are definitely Universe IDs!");
+            throw new Error("No games found. Double check Universe IDs!");
         }
 
-        // STEP 3: FETCH THUMBNAILS
-        const thumbUrl = `https://thumbnails.roblox.com/v1/games/icons?universeIds=${idsString}&size=512x512&format=Png&isCircular=false`;
+        // STEP 2: FETCH THUMBNAILS (16:9 Landscape)
+        // We use 'multiget/thumbnails' instead of 'icons' to get the big game picture
+        // We request size 768x432 for high quality big boxes
+        const thumbUrl = `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${idsString}&countPerUniverse=1&size=768x432&format=Png&isCircular=false`;
         const encodedThumbUrl = encodeURIComponent(thumbUrl);
         
         const thumbResponse = await fetch(`${proxyUrl}${encodedThumbUrl}`);
@@ -44,13 +44,14 @@ async function fetchGameStats() {
         const thumbnails = JSON.parse(thumbData.contents).data;
 
         // Success!
-        subtitle.innerText = "Look at all those numbers go!";
+        if(subtitle) subtitle.innerText = "Look at all those numbers go!";
+        
         renderGames(games, thumbnails);
         updateTotalStats(games);
 
     } catch (error) {
         console.error("Error:", error);
-        subtitle.innerText = "Error loading. Check Console (F12) for details.";
+        if(subtitle) subtitle.innerText = "Error loading. Check Console (F12).";
     }
 }
 
@@ -58,24 +59,34 @@ function renderGames(games, thumbnails) {
     const grid = document.getElementById('game-grid');
     grid.innerHTML = ''; 
 
-    // Sort by playing count (Highest first)
+    // SORTING: This sorts by Current Players (Highest at the top)
     games.sort((a, b) => b.playing - a.playing);
 
     games.forEach(game => {
-        // Match the thumbnail to the game ID
-        const thumbObj = thumbnails.find(t => t.targetId === game.id);
-        const thumbUrl = thumbObj ? thumbObj.imageUrl : 'https://via.placeholder.com/512';
+        // MATCHING: The Thumbnail API structure is different from Icon API
+        // We look for the object where universeId matches our game.id
+        const thumbData = thumbnails.find(t => t.universeId === game.id);
+        
+        // If found, grab the first image in the 'thumbnails' array, otherwise placeholder
+        let thumbUrl = 'https://via.placeholder.com/768x432';
+        if (thumbData && thumbData.thumbnails && thumbData.thumbnails.length > 0) {
+            thumbUrl = thumbData.thumbnails[0].imageUrl;
+        }
 
         const card = document.createElement('div');
         card.className = 'game-card';
+        
+        // Added style="width: 100%" to ensure the image stretches to fill the bigger box
         card.innerHTML = `
-            <img src="${thumbUrl}" alt="${game.name}" class="game-thumb">
+            <div class="image-container">
+                <img src="${thumbUrl}" alt="${game.name}" class="game-thumb" style="width: 100%; display: block;">
+            </div>
             <div class="game-info">
-                <div class="game-title" title="${game.name}">${game.name}</div>
+                <div class="game-title" title="${game.name}" style="font-size: 1.2rem; margin-bottom: 10px;">${game.name}</div>
                 
                 <div class="stat-row">
                     <span>🟢 Playing</span>
-                    <span class="stat-value">${game.playing.toLocaleString()}</span>
+                    <span class="stat-value" style="font-weight: bold; color: #00b06f;">${game.playing.toLocaleString()}</span>
                 </div>
                 <div class="stat-row">
                     <span>👣 Visits</span>
