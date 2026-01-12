@@ -127,6 +127,5 @@ function updateTotalStats(games) {
     if(vLabel) vLabel.innerText = totalVisits.toLocaleString();
 }
 
-fetchGameStats();
 setInterval(fetchGameStats, 60000);
 subtitle.innerText = `Updated at ${new Date().toLocaleTimeString()}`;
