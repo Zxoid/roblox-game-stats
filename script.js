@@ -1,4 +1,4 @@
-// YOUR UNIVERSE IDs (As you confirmed)
+// YOUR DATA UNIVERSE IDs
 const universeIds = [
     9501022712,  
     9041696916,  
@@ -10,30 +10,43 @@ const universeIds = [
     9451035756
 ];
 
+// Using a stable proxy to get around Roblox security
 const proxyUrl = "https://api.allorigins.win/get?url="; 
 
 async function fetchGameStats() {
+    const subtitle = document.querySelector('.subtitle');
+    
     try {
         const idsString = universeIds.join(',');
+
+        // 1. Fetch Game Info
+        const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}`;
+        const encodedStatsUrl = encodeURIComponent(statsUrl);
+        const statsResponse = await fetch(`${proxyUrl}${encodedStatsUrl}`);
         
-        // 1. Fetch Game Info (Directly using Universe IDs)
-        const statsApiUrl = encodeURIComponent(`https://games.roblox.com/v1/games?universeIds=${idsString}`);
-        const statsResponse = await fetch(`${proxyUrl}${statsApiUrl}`);
+        if (!statsResponse.ok) throw new Error("Proxy did not respond");
+        
         const statsData = await statsResponse.json();
+        if (!statsData.contents) throw new Error("No data returned");
+        
         const games = JSON.parse(statsData.contents).data;
 
         // 2. Fetch Thumbnails
-        const thumbApiUrl = encodeURIComponent(`https://thumbnails.roblox.com/v1/games/icons?universeIds=${idsString}&size=512x512&format=Png&isCircular=false`);
-        const thumbResponse = await fetch(`${proxyUrl}${thumbApiUrl}`);
+        const thumbUrl = `https://thumbnails.roblox.com/v1/games/icons?universeIds=${idsString}&size=512x512&format=Png&isCircular=false`;
+        const encodedThumbUrl = encodeURIComponent(thumbUrl);
+        const thumbResponse = await fetch(`${proxyUrl}${encodedThumbUrl}`);
         const thumbData = await thumbResponse.json();
         const thumbnails = JSON.parse(thumbData.contents).data;
 
+        // If we get here, it worked
+        subtitle.innerText = "Look at all those numbers go!";
         renderGames(games, thumbnails);
         updateTotalStats(games);
 
     } catch (error) {
-        console.error("Error fetching stats:", error);
-        document.querySelector('.subtitle').innerText = "Failed to load stats. Double check if these are definitely Universe IDs.";
+        console.error("Error details:", error);
+        subtitle.innerText = `Error: ${error.message}. Check Console (F12).`;
+        subtitle.style.color = "#ff4444";
     }
 }
 
@@ -41,7 +54,7 @@ function renderGames(games, thumbnails) {
     const grid = document.getElementById('game-grid');
     grid.innerHTML = ''; 
 
-    // Sort games by playing count (Highest first)
+    // Sort by playing count (Highest first)
     games.sort((a, b) => b.playing - a.playing);
 
     games.forEach(game => {
@@ -82,8 +95,12 @@ function updateTotalStats(games) {
         totalPlayers += game.playing;
     });
 
-    document.getElementById('total-players').innerText = totalPlayers.toLocaleString();
-    document.getElementById('total-visits').innerText = totalVisits.toLocaleString();
+    const playerLabel = document.getElementById('total-players');
+    const visitsLabel = document.getElementById('total-visits');
+
+    if(playerLabel) playerLabel.innerText = totalPlayers.toLocaleString();
+    if(visitsLabel) visitsLabel.innerText = totalVisits.toLocaleString();
 }
 
+// Start
 fetchGameStats();
