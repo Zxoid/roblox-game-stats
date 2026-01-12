@@ -10,7 +10,6 @@ const universeIds = [
     9451035756
 ];
 
-// CHANGED: Switched to corsproxy.io (More reliable, direct pass-through)
 const proxyUrl = "https://corsproxy.io/?"; 
 
 async function fetchGameStats() {
@@ -22,13 +21,11 @@ async function fetchGameStats() {
 
         // --- STEP 1: FETCH GAME STATS ---
         const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}`;
-        // Note: We encode the URL to ensure special characters pass through the proxy safely
         const encodedStatsUrl = encodeURIComponent(statsUrl);
         
         const statsResponse = await fetch(`${proxyUrl}${encodedStatsUrl}`);
         if (!statsResponse.ok) throw new Error("Failed to connect to Roblox API");
 
-        // CHANGED: parsing logic (No more 'contents' wrapper needed for this proxy)
         const statsData = await statsResponse.json();
         const games = statsData.data; 
 
@@ -36,13 +33,13 @@ async function fetchGameStats() {
             throw new Error("No games found. Double check Universe IDs!");
         }
 
-        // --- STEP 2: FETCH THUMBNAILS (16:9 Landscape) ---
+        // --- STEP 2: FETCH THUMBNAILS ---
         const thumbUrl = `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${idsString}&countPerUniverse=1&size=768x432&format=Png&isCircular=false`;
         const encodedThumbUrl = encodeURIComponent(thumbUrl);
         
         const thumbResponse = await fetch(`${proxyUrl}${encodedThumbUrl}`);
         const thumbData = await thumbResponse.json();
-        const thumbnails = thumbData.data; // CHANGED: Direct access
+        const thumbnails = thumbData.data; 
 
         // Success!
         if(subtitle) subtitle.innerText = "Look at all those numbers go!";
@@ -64,15 +61,21 @@ function renderGames(games, thumbnails) {
     games.sort((a, b) => b.playing - a.playing);
 
     games.forEach(game => {
-        // MATCHING: Match universeId to game.id
+        // MATCH THUMBNAIL
         const thumbData = thumbnails.find(t => t.universeId === game.id);
-        
         let thumbUrl = 'https://via.placeholder.com/768x432';
         if (thumbData && thumbData.thumbnails && thumbData.thumbnails.length > 0) {
             thumbUrl = thumbData.thumbnails[0].imageUrl;
         }
 
-        const card = document.createElement('div');
+        // --- NEW: CREATE LINK TO GAME ---
+        // We use rootPlaceId for the actual game link
+        const gameUrl = `https://www.roblox.com/games/${game.rootPlaceId}`;
+
+        // Changed 'div' to 'a' so it is clickable
+        const card = document.createElement('a');
+        card.href = gameUrl;
+        card.target = "_blank"; // Opens in a new tab
         card.className = 'game-card';
         
         card.innerHTML = `
