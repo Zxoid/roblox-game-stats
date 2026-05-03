@@ -15,26 +15,30 @@ const universeIds = [
     8320298286
 ];
 
-// Fixed proxy — allorigins returns a JSON wrapper: { contents: "..." }
-const proxyUrl = "https://api.allorigins.win/get?url=";
-
 async function fetchWithProxy(url) {
-    const encodedUrl = encodeURIComponent(url);
-    const response = await fetch(`${proxyUrl}${encodedUrl}`, { cache: "no-store" });
+    // Using corsproxy.org (different from corsproxy.io)
+    const proxyUrl = "https://corsproxy.org/?" + encodeURIComponent(url);
 
-    if (!response.ok) {
-        throw new Error(`Proxy request failed with status ${response.status}`);
+    const response = await fetch(proxyUrl, { cache: "no-store" });
+
+    // Log raw text BEFORE trying to parse so we can see exactly what is returned
+    const rawText = await response.text();
+    console.log("=== RAW RESPONSE (first 500 chars) ===");
+    console.log(rawText.substring(0, 500));
+    console.log("======================================");
+
+    // Guard: check it actually looks like JSON before parsing
+    const trimmed = rawText.trim();
+    if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+        throw new Error(`Proxy did not return JSON. Got: ${trimmed.substring(0, 100)}`);
     }
 
-    const wrapper = await response.json();         // allorigins wraps response in { contents: "..." }
-    const data = JSON.parse(wrapper.contents);     // parse the actual Roblox JSON from inside
-    return data;
+    return JSON.parse(trimmed);
 }
 
 async function fetchGameStats() {
     const subtitle = document.querySelector('.subtitle');
 
-    // Only show loading text on the very first run
     if (subtitle && subtitle.innerText === "Loading...") {
         subtitle.innerText = "Loading your games...";
     }
@@ -59,7 +63,6 @@ async function fetchGameStats() {
         const thumbData = await fetchWithProxy(thumbUrl);
         const thumbnails = thumbData.data;
 
-        // Success — update subtitle with current time
         if (subtitle) {
             const time = new Date().toLocaleTimeString();
             subtitle.innerText = `Updated at ${time}`;
@@ -70,22 +73,20 @@ async function fetchGameStats() {
         updateTotalStats(games);
 
     } catch (error) {
-        console.error("Error fetching game data:", error);
+        console.error("Error:", error.message);
         if (subtitle) subtitle.innerText = "Error loading. Check Console (F12).";
     }
 }
 
 function renderGames(games, thumbnails) {
     const grid = document.getElementById('game-grid');
-    const scrollPos = window.scrollY; // Save scroll position before re-render
+    const scrollPos = window.scrollY;
 
     grid.innerHTML = '';
 
-    // Sort by playing count (highest first)
     games.sort((a, b) => b.playing - a.playing);
 
     games.forEach(game => {
-        // Match thumbnail to game
         const thumbData = thumbnails ? thumbnails.find(t => t.universeId === game.id) : null;
         let thumbUrl = 'https://via.placeholder.com/768x432';
 
@@ -106,7 +107,6 @@ function renderGames(games, thumbnails) {
             </div>
             <div class="game-info">
                 <div class="game-title" title="${game.name}">${game.name}</div>
-
                 <div class="stat-row">
                     <span>🟢 Playing</span>
                     <span class="stat-value" style="color: #00b06f;">${game.playing.toLocaleString()}</span>
@@ -125,7 +125,7 @@ function renderGames(games, thumbnails) {
         grid.appendChild(card);
     });
 
-    window.scrollTo(0, scrollPos); // Restore scroll position after re-render
+    window.scrollTo(0, scrollPos);
 }
 
 function updateTotalStats(games) {
@@ -144,8 +144,5 @@ function updateTotalStats(games) {
     if (vLabel) vLabel.innerText = totalVisits.toLocaleString();
 }
 
-// Run immediately on page load
 fetchGameStats();
-
-// Then refresh every 60 seconds
 setInterval(fetchGameStats, 60000);
