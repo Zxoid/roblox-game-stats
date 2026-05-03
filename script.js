@@ -15,25 +15,23 @@ const universeIds = [
     8320298286
 ];
 
-async function fetchWithProxy(url) {
-    // Using corsproxy.org (different from corsproxy.io)
-    const proxyUrl = "https://corsproxy.org/?" + encodeURIComponent(url);
+async function fetchFromRoblox(url) {
+    // corsproxy.io with explicit headers to prevent gzip compression
+    const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(url);
 
-    const response = await fetch(proxyUrl, { cache: "no-store" });
+    const response = await fetch(proxyUrl, {
+        cache: "no-store",
+        headers: {
+            "Accept-Encoding": "identity", // Tell server: do NOT compress the response
+            "Accept": "application/json"
+        }
+    });
 
-    // Log raw text BEFORE trying to parse so we can see exactly what is returned
-    const rawText = await response.text();
-    console.log("=== RAW RESPONSE (first 500 chars) ===");
-    console.log(rawText.substring(0, 500));
-    console.log("======================================");
-
-    // Guard: check it actually looks like JSON before parsing
-    const trimmed = rawText.trim();
-    if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
-        throw new Error(`Proxy did not return JSON. Got: ${trimmed.substring(0, 100)}`);
+    if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
-    return JSON.parse(trimmed);
+    return await response.json();
 }
 
 async function fetchGameStats() {
@@ -51,7 +49,7 @@ async function fetchGameStats() {
 
         // --- STEP 1: FETCH GAME STATS ---
         const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}&_t=${cacheBuster}`;
-        const statsData = await fetchWithProxy(statsUrl);
+        const statsData = await fetchFromRoblox(statsUrl);
         const games = statsData.data;
 
         if (!games || games.length === 0) {
@@ -60,7 +58,7 @@ async function fetchGameStats() {
 
         // --- STEP 2: FETCH THUMBNAILS ---
         const thumbUrl = `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${idsString}&countPerUniverse=1&size=768x432&format=Png&isCircular=false&_t=${cacheBuster}`;
-        const thumbData = await fetchWithProxy(thumbUrl);
+        const thumbData = await fetchFromRoblox(thumbUrl);
         const thumbnails = thumbData.data;
 
         if (subtitle) {
