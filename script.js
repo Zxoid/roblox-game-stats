@@ -15,35 +15,40 @@ const universeIds = [
     8320298286
 ];
 
-const proxyUrl = "https://corsproxy.io/?"; 
+// Fixed proxy — allorigins returns a JSON wrapper: { contents: "..." }
+const proxyUrl = "https://api.allorigins.win/get?url=";
+
+async function fetchWithProxy(url) {
+    const encodedUrl = encodeURIComponent(url);
+    const response = await fetch(`${proxyUrl}${encodedUrl}`, { cache: "no-store" });
+
+    if (!response.ok) {
+        throw new Error(`Proxy request failed with status ${response.status}`);
+    }
+
+    const wrapper = await response.json();         // allorigins wraps response in { contents: "..." }
+    const data = JSON.parse(wrapper.contents);     // parse the actual Roblox JSON from inside
+    return data;
+}
 
 async function fetchGameStats() {
     const subtitle = document.querySelector('.subtitle');
-    
-    // Only show "Loading..." text on the very first run
-    if(subtitle && subtitle.innerText === "Loading...") {
+
+    // Only show loading text on the very first run
+    if (subtitle && subtitle.innerText === "Loading...") {
         subtitle.innerText = "Loading your games...";
     }
 
     try {
         const idsString = universeIds.join(',');
-        const cacheBuster = Date.now(); // Unique number every time
+        const cacheBuster = Date.now();
 
         console.log(`[${new Date().toLocaleTimeString()}] Fetching fresh data...`);
 
         // --- STEP 1: FETCH GAME STATS ---
-        // Added 'cache: no-store' to force browser to ignore cache
         const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}&_t=${cacheBuster}`;
-        const encodedStatsUrl = encodeURIComponent(statsUrl);
-        
-        const statsResponse = await fetch(`${proxyUrl}${encodedStatsUrl}`, {
-            cache: "no-store" 
-        });
-
-        if (!statsResponse.ok) throw new Error("Failed to connect to Roblox API");
-
-        const statsData = await statsResponse.json();
-        const games = statsData.data; 
+        const statsData = await fetchWithProxy(statsUrl);
+        const games = statsData.data;
 
         if (!games || games.length === 0) {
             throw new Error("No games found. Double check Universe IDs!");
@@ -51,65 +56,57 @@ async function fetchGameStats() {
 
         // --- STEP 2: FETCH THUMBNAILS ---
         const thumbUrl = `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${idsString}&countPerUniverse=1&size=768x432&format=Png&isCircular=false&_t=${cacheBuster}`;
-        const encodedThumbUrl = encodeURIComponent(thumbUrl);
-        
-        const thumbResponse = await fetch(`${proxyUrl}${encodedThumbUrl}`, {
-            cache: "no-store"
-        });
-        const thumbData = await thumbResponse.json();
-        const thumbnails = thumbData.data; 
+        const thumbData = await fetchWithProxy(thumbUrl);
+        const thumbnails = thumbData.data;
 
-        // Success!
-        if(subtitle) {
+        // Success — update subtitle with current time
+        if (subtitle) {
             const time = new Date().toLocaleTimeString();
             subtitle.innerText = `Updated at ${time}`;
             console.log("Success! Data updated.");
         }
-        
+
         renderGames(games, thumbnails);
         updateTotalStats(games);
 
     } catch (error) {
-        console.error("Error:", error);
-        if(subtitle) subtitle.innerText = "Error loading. Check Console (F12).";
+        console.error("Error fetching game data:", error);
+        if (subtitle) subtitle.innerText = "Error loading. Check Console (F12).";
     }
 }
 
 function renderGames(games, thumbnails) {
     const grid = document.getElementById('game-grid');
-    const scrollPos = window.scrollY; // Save scroll position
-    
-    grid.innerHTML = ''; 
+    const scrollPos = window.scrollY; // Save scroll position before re-render
 
-    // Sort by playing count (Highest first)
+    grid.innerHTML = '';
+
+    // Sort by playing count (highest first)
     games.sort((a, b) => b.playing - a.playing);
 
     games.forEach(game => {
-        // MATCH THUMBNAIL
-        const thumbData = thumbnails.find(t => t.universeId === game.id);
+        // Match thumbnail to game
+        const thumbData = thumbnails ? thumbnails.find(t => t.universeId === game.id) : null;
         let thumbUrl = 'https://via.placeholder.com/768x432';
-        
-        // If Roblox has a thumbnail, use it. 
-        // Note: If you changed it recently, Roblox API might still send the old one for a while.
+
         if (thumbData && thumbData.thumbnails && thumbData.thumbnails.length > 0) {
             thumbUrl = thumbData.thumbnails[0].imageUrl;
         }
 
-        // LINK TO GAME
         const gameUrl = `https://www.roblox.com/games/${game.rootPlaceId}`;
 
         const card = document.createElement('a');
         card.href = gameUrl;
-        card.target = "_blank"; 
+        card.target = "_blank";
         card.className = 'game-card';
-        
+
         card.innerHTML = `
             <div class="image-container">
                 <img src="${thumbUrl}" alt="${game.name}" class="game-thumb">
             </div>
             <div class="game-info">
                 <div class="game-title" title="${game.name}">${game.name}</div>
-                
+
                 <div class="stat-row">
                     <span>🟢 Playing</span>
                     <span class="stat-value" style="color: #00b06f;">${game.playing.toLocaleString()}</span>
@@ -124,10 +121,11 @@ function renderGames(games, thumbnails) {
                 </div>
             </div>
         `;
+
         grid.appendChild(card);
     });
 
-    window.scrollTo(0, scrollPos); // Restore scroll position
+    window.scrollTo(0, scrollPos); // Restore scroll position after re-render
 }
 
 function updateTotalStats(games) {
@@ -141,13 +139,13 @@ function updateTotalStats(games) {
 
     const pLabel = document.getElementById('total-players');
     const vLabel = document.getElementById('total-visits');
-    
-    if(pLabel) pLabel.innerText = totalPlayers.toLocaleString();
-    if(vLabel) vLabel.innerText = totalVisits.toLocaleString();
+
+    if (pLabel) pLabel.innerText = totalPlayers.toLocaleString();
+    if (vLabel) vLabel.innerText = totalVisits.toLocaleString();
 }
 
-// 1. Run immediately
+// Run immediately on page load
 fetchGameStats();
 
-// 2. Run every 60 seconds
+// Then refresh every 60 seconds
 setInterval(fetchGameStats, 60000);
