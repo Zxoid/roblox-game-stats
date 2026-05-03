@@ -1,4 +1,3 @@
-// 1. YOUR UNIVERSE IDs
 const universeIds = [
     9501022712,  
     9041696916,  
@@ -15,23 +14,41 @@ const universeIds = [
     8320298286
 ];
 
-async function fetchFromRoblox(url) {
-    // corsproxy.io with explicit headers to prevent gzip compression
-    const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(url);
+const proxyUrl = "https://corsproxy.io/?";
 
-    const response = await fetch(proxyUrl, {
-        cache: "no-store",
-        headers: {
-            "Accept-Encoding": "identity", // Tell server: do NOT compress the response
-            "Accept": "application/json"
-        }
-    });
+async function fetchFromRoblox(url) {
+    const encodedUrl = encodeURIComponent(url);
+    const response = await fetch(`${proxyUrl}${encodedUrl}`, { cache: "no-store" });
 
     if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
-    return await response.json();
+    // Check if the response is gzip compressed
+    const contentEncoding = response.headers.get("content-encoding");
+    const contentType = response.headers.get("content-type") || "";
+
+    // Try normal .json() first
+    const buffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+
+    // Gzip magic bytes are 0x1f 0x8b
+    const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
+
+    let text;
+    if (isGzip) {
+        console.log("Response is gzip — decompressing manually...");
+        const stream = new DecompressionStream("gzip");
+        const writer = stream.writable.getWriter();
+        writer.write(bytes);
+        writer.close();
+        const decompressed = await new Response(stream.readable).arrayBuffer();
+        text = new TextDecoder().decode(decompressed);
+    } else {
+        text = new TextDecoder().decode(bytes);
+    }
+
+    return JSON.parse(text);
 }
 
 async function fetchGameStats() {
@@ -47,7 +64,6 @@ async function fetchGameStats() {
 
         console.log(`[${new Date().toLocaleTimeString()}] Fetching fresh data...`);
 
-        // --- STEP 1: FETCH GAME STATS ---
         const statsUrl = `https://games.roblox.com/v1/games?universeIds=${idsString}&_t=${cacheBuster}`;
         const statsData = await fetchFromRoblox(statsUrl);
         const games = statsData.data;
@@ -56,7 +72,6 @@ async function fetchGameStats() {
             throw new Error("No games found. Double check Universe IDs!");
         }
 
-        // --- STEP 2: FETCH THUMBNAILS ---
         const thumbUrl = `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${idsString}&countPerUniverse=1&size=768x432&format=Png&isCircular=false&_t=${cacheBuster}`;
         const thumbData = await fetchFromRoblox(thumbUrl);
         const thumbnails = thumbData.data;
@@ -81,7 +96,6 @@ function renderGames(games, thumbnails) {
     const scrollPos = window.scrollY;
 
     grid.innerHTML = '';
-
     games.sort((a, b) => b.playing - a.playing);
 
     games.forEach(game => {
@@ -93,7 +107,6 @@ function renderGames(games, thumbnails) {
         }
 
         const gameUrl = `https://www.roblox.com/games/${game.rootPlaceId}`;
-
         const card = document.createElement('a');
         card.href = gameUrl;
         card.target = "_blank";
